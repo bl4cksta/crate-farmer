@@ -72,9 +72,9 @@ namespace CrateFarmer
         public const int itemTypesCount = 5;
         public enum ItemType
         {
+            Coin,
             HealPotion,
             ManaPotion,
-            Coin,
             Sword,
             Ring
         }
@@ -121,13 +121,21 @@ namespace CrateFarmer
                     // задаём шанс выпадения именно этого сундука
                     int dropChance = JsonSerializer.Deserialize<Drop>(lines[0]).Dropchance;
 
-                    // задаём список вещей которые могут выпасть
-                    List<Item> items = new List<Item>(); // optimize arrays?
-                    for (int i = 1; i < lines.Length; i++) items.Add(JsonSerializer.Deserialize<Item>(lines[i]));
-
-                    // добавляем в список
-                    var crate = new Crate(dropChance, items, Path.GetFileNameWithoutExtension(file));
-                    crates.Add(crate);
+                    // проверяем на наличие предметов
+                    if (lines.Length > 1)
+                    {
+                        // задаём список вещей которые могут выпасть
+                        List<Item> items = new List<Item>(); // optimize arrays?
+                        for (int i = 1; i < lines.Length; i++) items.Add(JsonSerializer.Deserialize<Item>(lines[i]));
+                        // добавляем в список
+                        var crate = new Crate(dropChance, items, Path.GetFileNameWithoutExtension(file));
+                        crates.Add(crate);
+                    }
+                    else // если пустой сундук
+                    {
+                        var crate = new Crate(dropChance, null, Path.GetFileNameWithoutExtension(file));
+                        crates.Add(crate);
+                    }
                     loadedCrates++;
                     fullDropChance += dropChance;
                     Debug.Log($"Crate loaded: {Path.GetFileName(file)}");
@@ -221,6 +229,9 @@ namespace CrateFarmer
         }
         internal int AddItems(List<Item> itemsToAdd)
         {
+            // если сундук пустой
+            if (itemsToAdd == null) return EmptyCrate();
+
             var lineCounter = 0;
             var addedItems = new int[Settings.itemTypesCount];
 
@@ -229,7 +240,6 @@ namespace CrateFarmer
             {
                 var random = new Random();
                 if (random.Next(100) < i.Dropchance) addedItems[(int)i.Type] += i.Count;
-
             }
 
             // добавляем предметы в инвентарь и выводим на экран общее кол-во
@@ -243,11 +253,7 @@ namespace CrateFarmer
             }
 
             // если ничего не выпало
-            if (lineCounter == 0)
-            {
-                Console.WriteLine("Crate is empty!");
-                lineCounter = 1;
-            }
+            if (lineCounter == 0) return EmptyCrate();
 
             return lineCounter;
         }
@@ -265,6 +271,11 @@ namespace CrateFarmer
                 if (count == 0) continue;
                 Console.WriteLine($"{type} : {count}");
             }
+        }
+        internal int EmptyCrate()
+        {
+            Console.WriteLine("Crate is empty!");
+            return 1;
         }
     }
 
